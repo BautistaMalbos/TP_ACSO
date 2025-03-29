@@ -10,21 +10,21 @@ void initialize_hashmap(HashmapEntry *hashmap) {
     }
 
     // Agregar entradas al hashmap
-    hashmap[hash_function(0xD4400000)] = (HashmapEntry){0xD4400000, execute_hlt};
-    hashmap[hash_function(0x8B200000)] = (HashmapEntry){0x8B200000, };
-    hashmap[hash_function(0xAB000000)] = (HashmapEntry){0xAB000000, execute_adds};
-    hashmap[hash_function(0xEB000000)] = (HashmapEntry){0xEB000000, execute_subs};
-    hashmap[hash_function(0xEA000000)] = (HashmapEntry){0xEA000000, execute_ands};
-    hashmap[hash_function(0xF8000000)] = (HashmapEntry){0xF8000000, };
-    hashmap[hash_function(0x38000000)] = (HashmapEntry){0x38000000, };
-    hashmap[hash_function(0x78000000)] = (HashmapEntry){0x78000000, };
-    hashmap[hash_function(0x9B000000)] = (HashmapEntry){0x9B000000, execute_mul};
-    hashmap[hash_function(0xAA000000)] = (HashmapEntry){0xAA000000, execute_orr};
-    hashmap[hash_function(0xCA000000)] = (HashmapEntry){0xCA000000, execute_eor};
-    hashmap[hash_function(0xD2800000)] = (HashmapEntry){0xD2800000, execute_movz};
-    hashmap[hash_function(0xF8400000)] = (HashmapEntry){0xF8400000, };
-    hashmap[hash_function(0x38400000)] = (HashmapEntry){0x38400000, };
-    hashmap[hash_function(0x78400000)] = (HashmapEntry){0x78400000, };
+    hashmap[hash_function(0xD4400000)] = (HashmapEntry){0xD4400000, execute_hlt};// HLT
+    hashmap[hash_function(0x8B200000)] = (HashmapEntry){0x8B200000, };//ADD (register)
+    hashmap[hash_function(0xAB000000)] = (HashmapEntry){0xAB000000, execute_adds};// ADDS (shifted register)
+    hashmap[hash_function(0xEB000000)] = (HashmapEntry){0xEB000000, execute_subs};// SUBS (shifted register)
+    hashmap[hash_function(0xEA000000)] = (HashmapEntry){0xEA000000, execute_ands};// ANDS (register)
+    hashmap[hash_function(0xF8000000)] = (HashmapEntry){0xF8000000, };//STUR 
+    hashmap[hash_function(0x38000000)] = (HashmapEntry){0x38000000, };//STURB
+    hashmap[hash_function(0x78000000)] = (HashmapEntry){0x78000000, };//STURH
+    hashmap[hash_function(0x9B000000)] = (HashmapEntry){0x9B000000, execute_mul};// MUL (register)
+    hashmap[hash_function(0xAA000000)] = (HashmapEntry){0xAA000000, execute_orr};// ORRS (register)
+    hashmap[hash_function(0xCA000000)] = (HashmapEntry){0xCA000000, execute_eor};// EORS (register)
+    hashmap[hash_function(0xD2800000)] = (HashmapEntry){0xD2800000, execute_movz};// MOVZ
+    hashmap[hash_function(0xF8400000)] = (HashmapEntry){0xF8400000, };//LDUR
+    hashmap[hash_function(0x38400000)] = (HashmapEntry){0x38400000, };//LDURB
+    hashmap[hash_function(0x78400000)] = (HashmapEntry){0x78400000, }; //LDURH
     hashmap[hash_function(0xD3400000)] = (HashmapEntry){0xD3400000, execute_lsr};  // LSL/LSR
     hashmap[hash_function(0xF1000000)] = (HashmapEntry){0xF1000000, execute_subis}; // CMP/SUBIS
     hashmap[hash_function(0xB4000000)] = (HashmapEntry){0xB4000000, execute_b};    // CBZ
