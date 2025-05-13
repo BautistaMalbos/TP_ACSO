@@ -18,6 +18,10 @@ int directory_findname(struct unixfilesystem *fs, const char *name,
         return -1;  
     }
 
+    if (!(in.i_mode & IALLOC) || ((in.i_mode & IFMT) != IFDIR)) {
+        return -1;  
+    }
+
     int filesize = inode_getsize(&in);
     int offset = 0;
     char block[DISKIMG_SECTOR_SIZE];
