@@ -12,5 +12,43 @@
 int directory_findname(struct unixfilesystem *fs, const char *name,
 		int dirinumber, struct direntv6 *dirEnt) {
   //Implement your code here
-  return 0;
+  if (fs == NULL || name == NULL || dirEnt == NULL) {
+    return -1; // Invalid input
+  }
+  if (strlen(name) == 0 || strlen(name) > 14) {
+    return -1; // Invalid name length
+  }
+  struct inode in;
+  if (inode_iget(fs, dirinumber, &in) == -1) {
+    return -1; // Error getting inode
+  }
+  if ((in.i_mode & IALLOC) == 0) {
+    return -1; // Inode not allocated
+  }
+  int num_entries = in.i_size0 / sizeof(struct direntv6);
+  for (int i = 0; i < num_entries; i++) {
+    struct direntv6 entry;
+    if (directory_getentry(fs, dirinumber, i, &entry, in, num_entries) == -1) {
+      return -1; // Error getting directory entry
+    }
+    if (strcmp(entry.d_name, name) == 0) {
+      memcpy(dirEnt, &entry, sizeof(struct direntv6));
+      return 0; // Entry found
+    }
+  }
+  return -1; // Entry not found
+}
+
+
+int directory_getentry(struct unixfilesystem *fs, int dirinumber,
+  int entrynum, struct direntv6 *dirEnt, struct inode in, int num_entries) {
+
+  int sector_num = INODE_START_SECTOR + (dirinumber - 1) / (DISKIMG_SECTOR_SIZE / sizeof(struct inode));
+  int inode_index = (dirinumber - 1) % (DISKIMG_SECTOR_SIZE / sizeof(struct inode));
+  struct direntv6 entries[DISKIMG_SECTOR_SIZE / sizeof(struct direntv6)];
+  int bytes_read = diskimg_readsector(fs->dfd, sector_num, entries);
+  if (bytes_read == -1) {
+    return -1; // Error reading sector
+  }
+  return bytes_read;
 }
