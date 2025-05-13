@@ -1,0 +1,36 @@
+FASE 1
+Inicio GDB
+pongo un beakpoint en la fase 1: b phase_1
+corro el programa: run
+Identifico que la fase nunca deberia de llegar a la linea 1131, direccion: 401e04
+El programa esta haciendo un jumpequals que me manda a la direccion 401e04, en caso de que el eax sea distinto de eax
+Debido a esto, se sabe que el rdi, es decir la palabra ingresada deberia ser lo que este dentro del rsi y debe ser igual al contenido rip+0xc7c62
+La clave para decodificar la fase 1 esta contenida en la direccion rsi, entonces averiguo el contenido de rsi
+direccion de memoria rsi: 0x401df6
+busco la clave: x/s 0x401df6
+
+CLAVE: Junta esperencia en la vida  Porque nada ensenha tanto Como el sufrir y el llorar
+
+FASE 2
+pongo un breakpoint en la fase 2: b *0x401e22
+next
+Analizo la funcion y me doy cuenta que me pide dos inputs: 
+Primero me dice que si la multiplicacion entre los inputs es igual a 0, se prende la ZF y explota la bomba
+Despues se le suma al ebx el ebp, y se compara con 0x85a9, entonces ebp = 0x85a9 - ebx
+En la funcion misterio me doy cuenta que para evitar el salta hacia la llamada de la funcion explode_bomb, el XOR debe de tener el primer bit prendido, es decir:
+Uno de los inputs negativo y otro positivo
+Clave1 = 0x85ab = 34219 y Clave2 = 0xFFFFFFFFFFFFFFFE = -2
+
+CLAVE: 34219 -2
+
+FASE 3
+pongo un brakpoint en la fase 3: b *
+next
+Analizo que me esta pidiendo 2 inputs, el primero un string y el segundo un int
+Entro a la fase de la funcion cuenta, el string tiene que ser parte de palabras.txt, ingreso la palabra tapar seguida de un numero random
+La funcion esta devolviendo 103101
+El numero debe de ser mayor a 9999
+
+CLAVE: tapar 103101
+
+FASE 4:
