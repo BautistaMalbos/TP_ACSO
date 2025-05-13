@@ -60,6 +60,8 @@ int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
         
         // Avanzar al siguiente componente del path
         token = strtok(NULL, "/");
-    }
     
+    }
+    free(path);
+    return inumber;
 }
