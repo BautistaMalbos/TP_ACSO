@@ -5,79 +5,41 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#define DIRNAMELEN 14
 
 /**
  * TODO
  */
 int directory_findname(struct unixfilesystem *fs, const char *name,
   int dirinumber, struct direntv6 *dirEnt) {
-if (fs == NULL || name == NULL || dirEnt == NULL) {
-return -1;
-}
+  struct inode in;
 
-if (strlen(name) == 0 || strlen(name) > 14) {
-return -1;
-}
+  if (inode_iget(fs, dirinumber, &in) == -1) {
+      return -1;  
+  }
 
-struct inode in;
-if (inode_iget(fs, dirinumber, &in) == -1) {
-return -1;
-}
+  int filesize = inode_getsize(&in);
+  int offset = 0;
+  char block[DISKIMG_SECTOR_SIZE];
 
-if ((in.i_mode & IALLOC) == 0) {
-return -1;
-}
+  while (offset < filesize) {
+      int bytes = file_getblock(fs, dirinumber, offset / DISKIMG_SECTOR_SIZE, block);
+      if (bytes <= 0) {
+          return -1;  
+      }
 
-int num_entries = in.i_size0 / sizeof(struct direntv6);
-for (int i = 0; i < num_entries; i++) {
-struct direntv6 entry;
-if (directory_getentry(fs, dirinumber, i, &entry) == -1) {
-return -1;
-}
+      int cantidad = bytes / sizeof(struct direntv6);
+      struct direntv6 *entradas = (struct direntv6 *) block; 
 
-if (strncmp(entry.d_name, name, 14) == 0) {
-memcpy(dirEnt, &entry, sizeof(struct direntv6));
-return 0;
-}
-}
+      for (int i = 0; i < cantidad; i++) {
+          if (strncmp(entradas[i].d_name, name, DIRNAMELEN) == 0) {
+              *dirEnt = entradas[i];  
+              return 0;
+          }
+      }
 
-return -1;
-}
+      offset += bytes; 
+  }
 
-int directory_getentry(struct unixfilesystem *fs, int dirinumber,
-  int entrynum, struct direntv6 *dirEnt) {
-if (fs == NULL || dirEnt == NULL) {
-return -1;
-}
-
-struct inode in;
-if (inode_iget(fs, dirinumber, &in) == -1) {
-return -1;
-}
-
-if ((in.i_mode & IALLOC) == 0) {
-return -1;
-}
-
-int num_entries = in.i_size0 / sizeof(struct direntv6);
-if (entrynum >= num_entries) {
-return -1;
-}
-
-int offset = entrynum * sizeof(struct direntv6);
-
-int block_num = inode_indexlookup(fs, &in, offset);
-if (block_num < 0) {
-return -1;
-}
-
-char block_data[DISKIMG_SECTOR_SIZE];
-if (diskimg_readsector(fs->dfd, block_num, block_data) < 0) {
-return -1;
-}
-
-int offset_in_block = offset % DISKIMG_SECTOR_SIZE;
-memcpy(dirEnt, block_data + offset_in_block, sizeof(struct direntv6));
-
-return 0;
+  return -1;  
 }
