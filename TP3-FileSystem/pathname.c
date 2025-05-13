@@ -11,34 +11,26 @@
  * TODO
  */
 int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
-    if (pathname == NULL || fs == NULL || strlen(pathname) == 0) {
-        return -1; // Input inválido
+    if (pathname == NULL || *pathname == '\0') {
+        return -1;
     }
 
-    // Copia del pathname para usar con strtok
-    char *path = strdup(pathname);
-    if (path == NULL) {
-        return -1; // Error de memoria
-    }
+    int current_inumber = 1; 
 
-    int inumber = ROOT_INUMBER;
-    struct direntv6 entry;
-    char *token = strtok(path, "/");
+    char path_copy[strlen(pathname) + 1];
+    strcpy(path_copy, pathname);
 
+    char *token = strtok(path_copy, "/");
     while (token != NULL) {
-        // Buscar el token (componente del path) en el directorio actual
-        if (directory_findname(fs, token, inumber, &entry) == -1) {
-            free(path);
-            return -1; // No se encontró el componente
+        struct direntv6 entry;
+
+        if (directory_findname(fs, token, current_inumber, &entry) == -1) {
+            return -1;  
         }
 
-        // Actualizar el inumber al nuevo directorio/archivo encontrado
-        inumber = entry.d_inumber;
-
-        // Siguiente componente
+        current_inumber = entry.d_inumber;
         token = strtok(NULL, "/");
     }
 
-    free(path);
-    return inumber; // Éxito: devuelve el inumber del último componente del path
+    return current_inumber; 
 }
