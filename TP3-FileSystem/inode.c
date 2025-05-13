@@ -11,6 +11,9 @@
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     if (inumber < 1) return -1;
 
+    if ((inp->i_mode & IALLOC) == 0) {
+        return -1; }
+
     int inode_per_sector = DISKIMG_SECTOR_SIZE / sizeof(struct inode); 
     int sector_num = INODE_START_SECTOR + (inumber - 1) / inode_per_sector; 
     int inode_index = (inumber - 1) % inode_per_sector; 
