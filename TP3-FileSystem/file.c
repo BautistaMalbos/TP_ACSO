@@ -19,26 +19,21 @@ int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *bu
 
     int sector = inode_indexlookup(fs, &in, blockNum);
     if (sector <= 0)
-        return 0;  
+        return 0;  // Sector no asignado, pero no es error, retorna 0 bytes válidos
 
     int bytes_read = diskimg_readsector(fs->dfd, sector, buf);
     if (bytes_read == -1)
         return -1;
 
+    // Calcular tamaño válido del último bloque (puede no estar completamente lleno)
     int filesize = in.i_size0 | (in.i_size1 << 16);
     int total_blocks = (filesize + DISKIMG_SECTOR_SIZE - 1) / DISKIMG_SECTOR_SIZE;
 
     if (blockNum < total_blocks - 1) {
         return DISKIMG_SECTOR_SIZE;
-    } 
-    else if (blockNum == total_blocks - 1) {
-        if (filesize % DISKIMG_SECTOR_SIZE == 0) {
-            return DISKIMG_SECTOR_SIZE;
-        } else {
-            return filesize % DISKIMG_SECTOR_SIZE;
-        }
-    } 
-    else {
+    } else if (blockNum == total_blocks - 1) {
+        return filesize % DISKIMG_SECTOR_SIZE == 0 ? DISKIMG_SECTOR_SIZE : filesize % DISKIMG_SECTOR_SIZE;
+    } else {
         return 0;
     }
 }
