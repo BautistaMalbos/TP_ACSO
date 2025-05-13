@@ -9,27 +9,32 @@
  * TODO
  */
 int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *buf) {
-    
-    struct inode inp;
-    int result = inode_iget(fs, inumber, &inp);
-    if (result == -1) {
-        return -1; // Error al obtener el inodo
+    struct inode in;
+
+    if (inode_iget(fs, inumber, &in) == -1)
+        return -1;
+
+    if ((in.i_mode & IALLOC) == 0)
+        return -1;
+
+    int sector = inode_indexlookup(fs, &in, blockNum);
+    if (sector <= 0)
+        return 0;  // Sector no asignado, pero no es error, retorna 0 bytes válidos
+
+    int bytes_read = diskimg_readsector(fs->dfd, sector, buf);
+    if (bytes_read == -1)
+        return -1;
+
+    // Calcular tamaño válido del último bloque (puede no estar completamente lleno)
+    int filesize = in.i_size0 | (in.i_size1 << 16);
+    int total_blocks = (filesize + DISKIMG_SECTOR_SIZE - 1) / DISKIMG_SECTOR_SIZE;
+
+    if (blockNum < total_blocks - 1) {
+        return DISKIMG_SECTOR_SIZE;
+    } else if (blockNum == total_blocks - 1) {
+        return filesize % DISKIMG_SECTOR_SIZE == 0 ? DISKIMG_SECTOR_SIZE : filesize % DISKIMG_SECTOR_SIZE;
+    } else {
+        return 0;
     }
-    if ((inp.i_mode & IALLOC) == 0) {
-        return -1; // Inodo no asignado
-    }
-    if (blockNum < 0 || blockNum >= 8) {
-        return -1; // Número de bloque inválido
-    }
-    int sector = inp.i_addr[blockNum];
-    if (sector == 0) {
-        return -1; // Sector no asignado
-    }
-    int read_bytes = diskimg_readsector(fs->dfd, sector, buf);
-    if (read_bytes == -1) {
-        return -1; // Error al leer el sector
-    }
-    
-    return 0;
 }
 
