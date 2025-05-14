@@ -32,7 +32,8 @@ Elijo la palabra tapar y el nuemero 0
 La funcion esta devolviendo 103101
 El numero que devuelve debe de ser mayor a 9999
 El segundo input debe coincidir con el numero que devuelve la funcion
+vuelvo a correr el programa ingreso la siguiente clave:
 
 CLAVE: tapar 103101
 
-FASE 4:
+
