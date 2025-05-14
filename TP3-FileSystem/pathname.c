@@ -11,34 +11,57 @@
  * TODO
  */
 int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
-    if (pathname == NULL || fs == NULL || strlen(pathname) == 0) {
-        return -1; // Input inválido
+    //Implement code here
+    if (pathname == NULL || fs == NULL) {
+        return -1; // Invalid input
     }
-
-    // Copia del pathname para usar con strtok
+    if (strlen(pathname) == 0) {
+        return -1; // Empty pathname
+    }
     char *path = strdup(pathname);
     if (path == NULL) {
-        return -1; // Error de memoria
+        return -1; // Memory allocation error
     }
-
-    int inumber = ROOT_INUMBER;
-    struct direntv6 entry;
     char *token = strtok(path, "/");
-
+    int inumber = ROOT_INUMBER; // Start with the root inode number
+    struct inode in;
     while (token != NULL) {
-        // Buscar el token (componente del path) en el directorio actual
-        if (directory_findname(fs, token, inumber, &entry) == -1) {
+        if (inode_iget(fs, inumber, &in) == -1) {
             free(path);
-            return -1; // No se encontró el componente
+            return -1; // Error getting inode
         }
-
-        // Actualizar el inumber al nuevo directorio/archivo encontrado
-        inumber = entry.d_inumber;
-
-        // Siguiente componente
+        if ((in.i_mode & IALLOC) == 0) {
+            free(path);
+            return -1; // Inode not allocated
+        }
+        int found = 0;
+        for (int i = 0; i < in.i_size0 / sizeof(struct direntv6); i++) {
+            struct direntv6 entry;
+            
+            // Obtener la i-ésima entrada del directorio
+            if (directory_getentry(fs, inumber, i, &entry) == -1) {
+                free(path);
+                return -1; // Error al obtener la entrada del directorio
+            }
+        
+            // Comparar el nombre de la entrada con el token actual del path
+            if (strcmp(entry.d_name, token) == 0) {
+                inumber = entry.d_inumber; // Actualizar el inumber si se encuentra
+                found = 1;
+                break;
+            }
+        }
+        
+        // Si no se encontró el componente del path, error
+        if (!found) {
+            free(path);
+            return -1;
+        }
+        
+        // Avanzar al siguiente componente del path
         token = strtok(NULL, "/");
+    
     }
-
     free(path);
-    return inumber; // Éxito: devuelve el inumber del último componente del path
+    return inumber;
 }
