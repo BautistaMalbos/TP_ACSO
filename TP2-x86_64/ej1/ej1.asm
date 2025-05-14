@@ -22,66 +22,105 @@ extern str_concat
 
 
 string_proc_list_create_asm:
-    mov     edi, SIZE_LIST
-    call    malloc
-    cmp     rax, 0
-    jnz     .inicializar_lista  
-    jmp     .fin_lista           
+        push    rbp
+        mov     rbp, rsp
 
-.inicializar_lista:
-    mov     qword [rax+8], 0     
-    mov     qword [rax],   0     
+        ; Reservar espacio para la lista (2 punteros: first, last)
+        mov     edi, 16
+        call    malloc
+        test    rax, rax
+        je      .error
 
-.fin_lista:
-    ret
+        ; Inicializar: first = NULL, last = NULL
+        mov     QWORD [rax], 0
+        mov     QWORD [rax+8], 0
+
+        ; Devolver puntero a la lista
+        jmp     .done
+
+.error:
+        xor     eax, eax
+
+.done:
+        leave
+        ret
+
 
 string_proc_node_create_asm:
-    movzx   edx, dil           
-    mov     rcx, rsi         
-    push    rcx               
-    push    rdx              
-    mov     edi, SIZE_NODE
-    call    malloc
-    pop     rdx             
-    pop     rcx                
-    test    rax, rax
-    je      .fin_nodo
+        push    rbp
+        mov     rbp, rsp
+        sub     rsp, 32
 
-    xor     r9, r9             
-    mov     [rax+8], r9         
-    mov     [rax],   r9        
-    mov     byte [rax+16], dl   
-    mov     [rax+24], rcx       
+        mov     r10d, edi                   ; type en r10b
+        mov     QWORD [rbp-32], rsi         ; guardar hash
+        mov     BYTE  [rbp-20], r10b        ; guardar type
 
-.fin_nodo:
-    ret
+        mov     edi, 32
+        call    malloc
+        mov     QWORD [rbp-8], rax
 
+        cmp     QWORD [rbp-8], 0
+        jne     .cont
+
+        xor     eax, eax
+        jmp     .fin
+
+.cont:
+        mov     r11, QWORD [rbp-8]
+        movzx   ecx, BYTE [rbp-20]
+        mov     BYTE [r11+16], cl
+
+        mov     rcx, QWORD [rbp-32]
+        mov     QWORD [r11+24], rcx
+
+        mov     QWORD [r11], 0
+        mov     QWORD [r11+8], 0
+
+        mov     rax, r11
+
+.fin:
+        leave
+        ret
 
 string_proc_list_add_node_asm:
-    push    rdi                
-    movzx   edi, sil            
-    mov     rsi, rdx          
-    call    string_proc_node_create_asm
-    pop     r9                  
+        push    rbp
+        mov     rbp, rsp
 
-    test    rax, rax
-    je      .fin_agregar
+        ; Guardar parámetros
+        mov     rbx, rdi     ; list
+        movzx   ecx, sil     ; type
+        mov     rdx, rdx     ; hash
 
-    mov     rcx, [r9+8]       
-    test    rcx, rcx
-    je      .lista_vacia
+        ; Crear nodo
+        mov     edi, ecx
+        mov     rsi, rdx
+        call    string_proc_node_create_asm
+        test    rax, rax
+        je      .done        ; si malloc falló, terminamos sin hacer nada
 
-    mov     [rcx],    rax       
-    mov     [rax+8],  rcx     
-    mov     [r9+8],  rax     
-    jmp     .fin_agregar
+        ; rax → new_node
+        mov     r8, rax
 
-.lista_vacia:
-    mov     [r9+8],  rax       
-    mov     [r9],    rax      
+        ; Si lista vacía (last == NULL)
+        mov     rax, [rbx+8]
+        test    rax, rax
+        jne     .append
 
-.fin_agregar:
-    ret
+        ; Lista vacía → first = last = new_node
+        mov     [rbx], r8
+        mov     [rbx+8], r8
+        jmp     .done
+
+.append:
+        ; Conectar nodo actual al nuevo
+        mov     rax, [rbx+8]         ; last
+        mov     [rax], r8            ; last->next = new_node
+        mov     [r8+8], rax          ; new_node->prev = last
+        mov     [rbx+8], r8          ; list->last = new_node
+
+.done:
+        leave
+        ret
 
 string_proc_list_concat_asm:
     jmp     string_proc_list_concat

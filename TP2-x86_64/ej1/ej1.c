@@ -18,36 +18,40 @@ string_proc_node* string_proc_node_create(uint8_t type, char* hash){
 	return node;
 }
 
-void string_proc_list_add_node(string_proc_list* list, uint8_t type, char* hash){
-	string_proc_node* nuevo_node = string_proc_node_create(type, hash);
-	if(!nuevo_node) return;
-	if (!list->last) {
-		list->first = nuevo_node;
-	}else{
-		nuevo_node->previous = list->last;
-		list->last->next = nuevo_node;
-	}
-	list->last = nuevo_node;
+void string_proc_list_add_node(string_proc_list* list, uint8_t type, char* hash) {
+    string_proc_node* new_node = string_proc_node_create(type, hash);
+
+    if (new_node == NULL) {
+        return; 
+    }
+
+    if (list->last == NULL) {
+        list->first = new_node;
+        list->last = new_node;
+    } 
+	
+    list->last->next = new_node;
+    new_node->previous = list->last;
+    list->last = new_node;
+    
 }
 
-char* string_proc_list_concat(string_proc_list* list, uint8_t type , char* hash){
-	string_proc_node* node = list->first;
-	char* acumulado = hash;
-	while (node != NULL){
-		if (node->type == type){
-			char* bucket_hash = node->hash;
-			char* result = str_concat(acumulado, bucket_hash);
-			if (acumulado != hash) {
-                free(acumulado);
+char* string_proc_list_concat(string_proc_list* list, uint8_t type, char* hash) {
+    string_proc_node* node = list->first;
+    char* concatenado = hash;  
+
+    while (node != NULL) {
+        if (node->type == type) {
+            char* cadena = str_concat(concatenado, node->hash);
+            if (concatenado != hash) {
+                free(concatenado); 
             }
-			acumulado = result;
-		}
-		node = node->next;
-	}
-	
+            concatenado = cadena;  
+        }
+        node = node->next;
+    }
 
-	return acumulado;
-
+    return concatenado;
 }
 
 /** AUX FUNCTIONS **/
@@ -74,7 +78,6 @@ void string_proc_node_destroy(string_proc_node* node){
 	node->type      = 0;			
 	free(node);
 }
-
 
 char* str_concat(char* a, char* b) {
 	int len1 = strlen(a);
