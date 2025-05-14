@@ -6,9 +6,6 @@
 #include <string.h>
 #include <assert.h>
 
-/**
- * TODO
- */
 int directory_findname(struct unixfilesystem *fs, const char *name,
     int dirinumber, struct direntv6 *dirEnt) {
 if (!fs || !name || !dirEnt) return -1;

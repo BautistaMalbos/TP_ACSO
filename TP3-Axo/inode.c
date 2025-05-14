@@ -6,15 +6,12 @@
 #include "unixfilesystem.h"
 
 
-/**
- * TODO
- */
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     if (inumber < 1) {
         return -1;
     }
 
-    if (inumber > fs->superblock.s_isize) { //verifico que el inodo no sea mayor al tamaño del filesystem
+    if (inumber > fs->superblock.s_isize) { 
         return -1;
     }
 
@@ -37,10 +34,6 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
 
     return 0; 
 }
-
-/**
- * TODO
- */
 
  int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
     if ((inp->i_mode & IALLOC) == 0) {

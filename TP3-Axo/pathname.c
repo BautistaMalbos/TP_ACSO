@@ -7,9 +7,6 @@
 #include <string.h>
 #include <assert.h>
 
-/**
- * TODO
- */
 int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
 
     if (pathname == NULL || fs == NULL) {
