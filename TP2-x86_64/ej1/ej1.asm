@@ -18,6 +18,7 @@ extern string_proc_list_concat
 ; FUNCIONES auxiliares que pueden llegar a necesitar:
 extern malloc
 extern free
+extern str_concat
 
 
 string_proc_list_create_asm:
@@ -83,45 +84,5 @@ string_proc_list_add_node_asm:
     ret
 
 string_proc_list_concat_asm:
-    push %rbp
-    mov %rsp, %rbp
-    push %rdi     # Guardamos a
-    push %rsi     # Guardamos b
-
-    # strlen(a)
-    mov %rdi, %rdi    # a ya está en rdi
-    call strlen
-    mov %rax, %r8     # len1 = r8
-
-    # strlen(b)
-    pop %rsi          # recuperar b
-    mov %rsi, %rdi    # poner b en rdi
-    call strlen
-    mov %rax, %r9     # len2 = r9
-
-    # totalLength = len1 + len2
-    add %r8, %r9      # r9 = len1 + len2
-    add $1, %r9       # +1 para el null terminator
-
-    # malloc(totalLength)
-    mov %r9, %rdi     # tamaño a rdi
-    call malloc
-    mov %rax, %r10    # puntero resultado = r10
-
-    # strcpy(result, a)
-    pop %rsi          # recuperar a
-    mov %rsi, %rsi    # a en rsi
-    mov %r10, %rdi    # destino en rdi
-    call strcpy
-
-    # strcat(result, b)
-    mov %r10, %rdi    # destino sigue siendo result
-    mov %rsi, %rsi    # b en rsi
-    call strcat
-
-    mov %r10, %rax    # retorno = puntero result
-
-    pop %rbp
-    ret
-
+    jmp     string_proc_list_concat
 
