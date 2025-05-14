@@ -19,7 +19,7 @@ Primero me dice que si la multiplicacion entre los inputs es igual a 0, se prend
 Despues se le suma al ebx el ebp, y se compara con 0x85a9, entonces ebp = 0x85a9 - ebx
 En la funcion misterio me doy cuenta que para evitar el salta hacia la llamada de la funcion explode_bomb, el XOR debe de tener el primer bit prendido, es decir:
 Uno de los inputs negativo y otro positivo
-Clave1 = 0x85ab = 34219 y Clave2 = 0xFFFFFFFFFFFFFFFE = -2
+Input1 = 0x85ab = 34219 y Input2 = 0xFFFFFFFFFFFFFFFE = -2
 
 CLAVE: 34219 -2
 
@@ -28,8 +28,10 @@ pongo un brakpoint en la fase 3: b *
 next
 Analizo que me esta pidiendo 2 inputs, el primero un string y el segundo un int
 Entro a la fase de la funcion cuenta, el string tiene que ser parte de palabras.txt, ingreso la palabra tapar seguida de un numero random
+Elijo la palabra tapar y el nuemero 0
 La funcion esta devolviendo 103101
-El numero debe de ser mayor a 9999
+El numero que devuelve debe de ser mayor a 9999
+El segundo input debe coincidir con el numero que devuelve la funcion
 
 CLAVE: tapar 103101
 
