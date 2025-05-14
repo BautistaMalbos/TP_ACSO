@@ -35,11 +35,11 @@ int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *bu
         int resto = filesize % DISKIMG_SECTOR_SIZE;
         if (resto == 0) {
             return DISKIMG_SECTOR_SIZE;
-        } else {
+        } 
+        else {
             return resto;
         }
     } 
-   
     return 0;
     
 }
