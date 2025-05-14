@@ -14,18 +14,26 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
         return -1;
     }
 
-    int inode_per_sector = DISKIMG_SECTOR_SIZE / sizeof(struct inode); //calculo cuantos inodes hay por sector
-    int sector_num = INODE_START_SECTOR + (inumber - 1) / inode_per_sector; //Veo en que sector del disco esta
-    int inode_index = (inumber - 1) % inode_per_sector; //Veo pos del inode adentro del sector 
+    if (inumber > fs->superblock.s_isize) { //verifico que el inodo no sea mayor al tamaño del filesystem
+        return -1;
+    }
 
-    struct inode buffer[ inode_per_sector ]; //guardo espacio de la cantidad de inodes que hay por sector  
+    int inode_per_sector = DISKIMG_SECTOR_SIZE / sizeof(struct inode); 
+    int sector_num = INODE_START_SECTOR + (inumber - 1) / inode_per_sector; 
+    int inode_index = (inumber - 1) % inode_per_sector;  
 
-    int read_bytes = diskimg_readsector(fs->dfd, sector_num, buffer); // en buffer tengo los 16 inodes del sector
+    struct inode buffer[ inode_per_sector ];  
+
+    int read_bytes = diskimg_readsector(fs->dfd, sector_num, buffer); 
     if (read_bytes == -1) {
         return -1;
     }
 
-    *inp = buffer[inode_index]; // copio el inodo llamandolo de buffer
+    if (read_bytes != DISKIMG_SECTOR_SIZE) {
+        return -1; 
+    }
+
+    *inp = buffer[inode_index];
 
     return 0; 
 }
@@ -33,68 +41,80 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
 /**
  * TODO
  */
-int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {  
+
+ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
     if ((inp->i_mode & IALLOC) == 0) {
-        return -1; // inodo no asignado
+        return -1;
     }
 
-    // ARCHIVO NORMAL: bloques directos
+    const int punteros_per_block = DISKIMG_SECTOR_SIZE / sizeof(unsigned short);
+
+    // ───── BLOQUES DIRECTOS ─────
     if ((inp->i_mode & ILARG) == 0) {
         if (blockNum < 0 || blockNum >= 8) {
             return -1;
         }
 
-        int sector = inp->i_addr[blockNum];
-
-        if (sector == 0) { //Chequeo sector con valor 0
+        int sector_directo = inp->i_addr[blockNum];
+        if (sector_directo == 0) {
             return -1;
-        } else {
-            return sector;
         }
+
+        return sector_directo;
     }
 
-    // ARCHIVO GRANDE
-    const int PTRS_PER_BLOCK = DISKIMG_SECTOR_SIZE / 2; //Punteros a bloque entran por bloque del disco (512/2) 
+    // ───── BLOQUES INDIRECTOS ─────
+    if (blockNum < 7 * punteros_per_block) {
+        int indice_indirecto = blockNum / punteros_per_block;
+        int indice_entrada = blockNum % punteros_per_block;
 
-    // BLOQUES INDIRECTOS (i_addr[0] a i_addr[6]) hay 7 entradas que apuntan a bloques indirectos y cada bloque indirecto puede almacenar 256 punteros
-    if (blockNum < 7 * PTRS_PER_BLOCK) { // 7*256 = 1792 puede tener hasta 1792 bloques de datos usando bloques inderectos 
-        int indirect_block_index = blockNum / PTRS_PER_BLOCK; //En que bloque indirecto esta el blockNum 
-        int offset = blockNum % PTRS_PER_BLOCK;
+        int sector_indirecto = inp->i_addr[indice_indirecto];
+        if (sector_indirecto == 0) {
+            return -1;
+        }
 
-        unsigned short indirect_block[PTRS_PER_BLOCK];
-        int indirect_sector = inp->i_addr[indirect_block_index];
-        if (indirect_sector == 0) return -1;
+        unsigned short buffer_indirecto[punteros_per_block];
+        if (diskimg_readsector(fs->dfd, sector_indirecto, buffer_indirecto) < 0) {
+            return -1;
+        }
 
-        if (diskimg_readsector(fs->dfd, indirect_sector, indirect_block) == -1) return -1; 
+        int sector_datos = buffer_indirecto[indice_entrada];
+        if (sector_datos == 0) {
+            return -1;
+        }
 
-        int data_sector = indirect_block[offset];
-        
-        if (data_sector == 0) return -1;
-        return data_sector;
-        
-
+        return sector_datos;
     }
 
-    // BLOQUE DOBLEMENTE INDIRECTO (i_addr[7])
-    int remaining_block = blockNum - 7 * PTRS_PER_BLOCK;
-    int first_level_index = remaining_block / PTRS_PER_BLOCK;
-    int second_level_index = remaining_block % PTRS_PER_BLOCK;
+    // ───── BLOQUES DOBLEMENTE INDIRECTOS ─────
+    int sector_doble = inp->i_addr[7];
+    if (sector_doble == 0) {
+        return -1;
+    }
 
-    unsigned short double_indirect_block[PTRS_PER_BLOCK];
+    unsigned short buffer_doble[punteros_per_block];
+    if (diskimg_readsector(fs->dfd, sector_doble, buffer_doble) < 0) {
+        return -1;
+    }
+
+    int remaining_block = blockNum - 7 * punteros_per_block;
+    int indirect_block_idx = remaining_block / punteros_per_block;
+    int data_block_idx = remaining_block % punteros_per_block;
+    
+    unsigned short indirect_block_ptrs[punteros_per_block];
     int dbl_indirect_sector = inp->i_addr[7];
-    if (dbl_indirect_sector == 0) return -1;
-
-    if (diskimg_readsector(fs->dfd, dbl_indirect_sector, double_indirect_block) == -1) return -1;
-
-    int indirect_sector = double_indirect_block[first_level_index];
+    
+    if (diskimg_readsector(fs->dfd, dbl_indirect_sector, indirect_block_ptrs) == -1) return -1;
+    
+    int indirect_sector = indirect_block_ptrs[indirect_block_idx];
     if (indirect_sector == 0) return -1;
-
-    unsigned short indirect_block[PTRS_PER_BLOCK];
-    if (diskimg_readsector(fs->dfd, indirect_sector, indirect_block) == -1) return -1;
-
-    int data_sector = indirect_block[second_level_index];
-
-    if (data_sector == 0) return -1; 
+    
+    unsigned short data_block_ptrs[punteros_per_block];
+    if (diskimg_readsector(fs->dfd, indirect_sector, data_block_ptrs) == -1) return -1;
+    
+    int data_sector = data_block_ptrs[data_block_idx];
+    if (data_sector == 0) return -1;
+    
     return data_sector;
     
 }
@@ -102,5 +122,3 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
 int inode_getsize(struct inode *inp) {
   return ((inp->i_size0 << 16) | inp->i_size1); 
 }
-
-
