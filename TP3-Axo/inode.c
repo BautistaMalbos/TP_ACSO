@@ -58,25 +58,25 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
 
     // ───── BLOQUES INDIRECTOS ─────
     if (blockNum < 7 * punteros_per_block) {
-        int indice_indirecto = blockNum / punteros_per_block;
-        int indice_entrada = blockNum % punteros_per_block;
-
-        int sector_indirecto = inp->i_addr[indice_indirecto];
-        if (sector_indirecto == 0) {
+        int indirect_index = blockNum / punteros_per_block;
+        int entry_index = blockNum % punteros_per_block;
+    
+        int indirect_sector = inp->i_addr[indirect_index];
+        if (indirect_sector == 0) {
             return -1;
         }
-
+    
         unsigned short buffer_indirecto[punteros_per_block];
-        if (diskimg_readsector(fs->dfd, sector_indirecto, buffer_indirecto) < 0) {
+        if (diskimg_readsector(fs->dfd, indirect_sector, buffer_indirecto) < 0) {
             return -1;
         }
-
-        int sector_datos = buffer_indirecto[indice_entrada];
-        if (sector_datos == 0) {
+    
+        int data_sector = buffer_indirecto[entry_index];
+        if (data_sector == 0) {
             return -1;
         }
-
-        return sector_datos;
+    
+        return data_sector;
     }
 
     // ───── BLOQUES DOBLEMENTE INDIRECTOS ─────
