@@ -5,42 +5,49 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#define DIRNAMELEN 14
 
 /**
  * TODO
  */
 int directory_findname(struct unixfilesystem *fs, const char *name,
-		int dirinumber, struct direntv6 *dirEnt) {
-    struct inode in;
+    int dirinumber, struct direntv6 *dirEnt) {
+if (!fs || !name || !dirEnt) return -1;
 
-    if (inode_iget(fs, dirinumber, &in) == -1) {
-        return -1;  
+struct inode node;
+if (inode_iget(fs, dirinumber, &node) < 0) {
+    return -1;}
+
+if ((node.i_mode & IALLOC) == 0) {
+    return -1;}
+
+int total_size = inode_getsize(&node);
+if (total_size <= 0) {
+    return -1;}
+
+char data[DISKIMG_SECTOR_SIZE];
+int logical_block = 0;
+int processed_bytes = 0;
+
+int direntry_size = sizeof(struct direntv6);
+int dirname_size = 14 ;
+
+while (processed_bytes < total_size) {
+    int read = file_getblock(fs, dirinumber, logical_block, data);
+    if (read <= 0) return -1;
+
+    for (int pos = 0; pos + direntry_size <= read; pos += direntry_size) {
+        struct direntv6 *entry = (struct direntv6 *)(data + pos);
+
+        if (strncmp(entry->d_name, name, dirname_size) == 0) {
+            *dirEnt = *entry;
+            return 0;
+        }
     }
 
-    int filesize = inode_getsize(&in); //tamaño del archivo en bytes 
-    int offset = 0;
-    char block[DISKIMG_SECTOR_SIZE];
+    processed_bytes += read;
+    logical_block++;
+}
 
-    while (offset < filesize) {
-        int bytes = file_getblock(fs, dirinumber, offset / DISKIMG_SECTOR_SIZE, block);
-        if (bytes <= 0) {
-            return -1;  
-        }
-
-        int cantidad = bytes / sizeof(struct direntv6);  // veo cuantas entradas hay en el bloque. bytes / 16 --> Que es el tamaño lo veo en direntv6.h
-        struct direntv6 *entradas = (struct direntv6 *) block; 
-
-        for (int i = 0; i < cantidad; i++) {
-            if (strncmp(entradas[i].d_name, name, DIRNAMELEN) == 0) {
-                *dirEnt = entradas[i];  
-                return 0;
-            }
-        }
-
-        offset += bytes; //voy al bloque que sigue
-    }
-
-    return -1;  
+return -1;
 }
 

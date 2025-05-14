@@ -11,26 +11,56 @@
  * TODO
  */
 int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
-    if (pathname == NULL || *pathname == '\0') {
-        return -1;
+
+    if (pathname == NULL || fs == NULL) {
+        return -1; 
     }
-
-    int current_inumber = 1; 
-
-    char path_copy[strlen(pathname) + 1];
-    strcpy(path_copy, pathname);
-
-    char *token = strtok(path_copy, "/");
+    if (strlen(pathname) == 0) {
+        return -1; 
+    }
+    char *path = strdup(pathname);
+    if (path == NULL) {
+        return -1; 
+    }
+    char *token = strtok(path, "/");
+    int inumber = ROOT_INUMBER; 
+    struct inode in;
     while (token != NULL) {
-        struct direntv6 entry;
 
-        if (directory_findname(fs, token, current_inumber, &entry) == -1) {
-            return -1;  
+        if (inode_iget(fs, inumber, &in) == -1) {
+            free(path);
+            return -1; 
         }
 
-        current_inumber = entry.d_inumber;
-        token = strtok(NULL, "/");
-    }
+        if ((in.i_mode & IALLOC) == 0) {
+            free(path);
+            return -1;
+        }
 
-    return current_inumber; 
+        int found = 0;
+        for (int i = 0; i < in.i_size0 / sizeof(struct direntv6); i++) {
+            struct direntv6 entry;
+
+            if (directory_getentry(fs, inumber, i, &entry) == -1) {
+                free(path);
+                return -1; 
+            }
+        
+            if (strcmp(entry.d_name, token) == 0) {
+                inumber = entry.d_inumber; 
+                found = 1;
+                break;
+            }
+        }
+        
+        if (!found) {
+            free(path);
+            return -1;
+        }
+
+        token = strtok(NULL, "/");
+    
+    }
+    free(path);
+    return inumber;
 }
