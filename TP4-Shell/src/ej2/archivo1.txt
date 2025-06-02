@@ -1,0 +1,4 @@
+foto.png
+archivo1.zip
+archivo2.zip
+documento.doc

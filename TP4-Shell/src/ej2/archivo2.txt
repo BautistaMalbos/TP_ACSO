@@ -1,0 +1,4 @@
+foto.png
+archivo1.zip
+fotos.zip
+tp.c
