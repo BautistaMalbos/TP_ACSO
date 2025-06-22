@@ -1,0 +1,68 @@
+Importante: Se modifico el Make para agregar nuevos Tests
+- Los tests se corren de la siguiente forma:
+    -tptest: ./tptest
+    -tpcostomtest: ./tpcustomtest --s
+    -my_tests: ./my_tests  
+
+Arranqué con pruebas simples que me fueron marcando qué cosas tenían que funcionar y cómo.
+
+El primer test que hice test1 era para probar que un worker ejecutara una única tarea. 
+Esto fue clave para chequear que lo más elemental del ThreadPool funcionaba, o sea, que un hilo pudiera 
+arrancar, esperar una tarea y después ejecutarla cuando se la asignaban. Para poder realizar el test
+se creo la estructura worker donde guarde el hilo, el thunk, entre otras cosas
+
+Después hice el test2, donde tenía que manejar varias tareas con más de un worker. Para ello se utilizo 
+una cola donde meter las tareas y el uso del mutex para protegerlas, debido a que garantiza que solo 
+un hilo pueda leer o modificar la cola en un momento dado, evitando así que dos hilos quieran acceder a
+la misma tarea al mismo tiempo
+
+Así, logré una implementación donde cada worker podía tomar una tarea directamente desde la cola.
+
+Pero se nos pidio que utilizaramos el dispacher, porque es una mejor práctica en cuanto a cómo se organizan 
+y comunican los hilos. Además, el uso del dispatcher es fundamental si "algún día se quiere hacer un 
+ThreadPool más avanzado, como uno con creación de hilos lazy, donde los workers se crean solo cuando hacen 
+falta"(Enunciado TP5).
+
+Esto ayudó a tener una separación más clara de responsabilidades, debido a que los workers ya no buscaban 
+sus tareas, solo esperan que alguien les diga cuándo y qué ejecutar. De eso se encargaba el dispacher, 
+quien era el unico encargado de asignarlas.
+
+Acá me di cuenta de que no siempre conviene despertar a todos los hilos cuando hay una 
+tarea nueva. 
+
+Por ello, se utilizo 
+    - notify_one() en schedule() para despertar solo al dispatcher, que es el que sabe qué hacer con la tarea.
+    - notify_all() se uso para avisar cuando un trabajador terminaba la tarea, de esta manera el dispatcher 
+      puede asignarle una tarea nueva
+
+Más adelante, con tests como test4 y testHundredTasks, hubo un problema, al estar utilizando solo una cola 
+de prioridad al momento de delegar las tareas a realizar. Lo que pasaba era que al tener una cantidad de 
+workers mucho mas chica que la cantidad de tareas, y cada uno con un cierto tiempo de espera, generaba que 
+se saltearan tareas al momento de asignarlas, es decir pasar de que se asigne la tarea 5 al worker 3, a que 
+se asigne la tarea 70 al worker 4. Tambien habian casos que por ejemplo se asignaba la tarea 34 al worker 7 
+y luego la tarea 18 al worker 8. Esto pasaba porque el dispatcher sacaba tareas de la cola antes de estar 
+completamente seguro de que había un worker disponible. Entonces esa tarea quedaba “colgada” un ratito hasta 
+que algún hilo se liberaba, mientras tanto otras tareas entraban y se ejecutaban antes. En otras palabras, 
+estaba sacando tareas antes de tiempo.
+
+Esto hizo claro que necesitaba un control más fino para despertar a los workers. Ahí fue donde el semáforo 
+realmente se volvió útil.
+
+Lo que hice fue que cada worker se quede bloqueado esperando en su semáforo. Cuando el dispatcher le asigna
+una tarea, le manda una señal y el worker se despierta justo en el momento que tiene algo que hacer.
+Esto permite que los hilos no esten preguntando todo el rato por tarea disponible, sino que 
+
+Por último, si bien el testThreadClosur no se realizo al final, sino al momento de realizar el segundo Test, 
+y fue corrido varias veces durante la implementación del dispacher, fue util para asegurarme de que todo se 
+cerrara bien, es decir, que todos los hilos terminen de trabajar y se cierren sin errores
+
+Con estos tests se lograron resolver los propuestos por la catedra
+
+A modo de conclusión, este proceso de prueba y error con los distintos tests fue fundamental para ir 
+ajustando la implementación del ThreadPool. Al principio parecía que con una cola y algunas notificaciones 
+bastaba, pero cuando la cantidad de tareas creció y la ejecución se volvió más compleja, surgieron problemas 
+que revelaron la necesidad de una mejor coordinación entre los hilos. Incorporar el hilo dispatcher y el uso 
+del semáforo permitió controlar de forma más fina el flujo de tareas y la activación de los workers, evitando 
+que se asignaran tareas antes de tiempo o que se saltaran. Así, se logró una ejecución ordenada, eficiente
+ y sin bloqueos inesperados. Esto demuestra lo importante que es pensar no solo en qué hacer, sino en cómo y 
+ cuándo se comunican los hilos para que el sistema funcione correctamente.
