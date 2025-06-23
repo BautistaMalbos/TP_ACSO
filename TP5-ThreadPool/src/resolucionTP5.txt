@@ -4,6 +4,14 @@ Importante: Se modifico el Make para agregar nuevos Tests
     -tpcostomtest: ./tpcustomtest --s
     -my_tests: ./my_tests  
 
+En el server:
+    -tptest:   make tptest
+                ./tptest
+    -tpcostomtest: make tpcustomtest
+                ./tpcustomtest --s
+    -my_tests: make my_tests
+                ./my_tests  
+
 Arranqué con pruebas simples que me fueron marcando qué cosas tenían que funcionar y cómo.
 
 El primer test que hice test1 era para probar que un worker ejecutara una única tarea. 
